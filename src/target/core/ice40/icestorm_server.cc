@@ -61,22 +61,13 @@ IcestormServer& IcestormServer::port(uint32_t port) {
 }
 
 bool IcestormServer::check() const {
-  // Return false if we can't locate any of the necessary quartus components
-  if (System::execute("ls " + path_ + "/sopc_builder/bin/qsys-generate > /dev/null") != 0) {
+  // Return false if we can't locate any of the necessary icestorm components
+  if (System::execute("ls " + path_ + "/bin/yosys > /dev/null") != 0) {
     return false;
   }
-  if (System::execute("ls " + path_ + "/bin/quartus_map > /dev/null") != 0) {
-    return false;
-  }
-  if (System::execute("ls " + path_ + "/bin/quartus_fit > /dev/null") != 0) {
-    return false;
-  }
-  if (System::execute("ls " + path_ + "/bin/quartus_asm > /dev/null") != 0) {
-    return false;
-  }
-  if (System::execute("ls " + path_ + "/bin/quartus_pgm > /dev/null") != 0) {
-    return false;
-  }
+//  if (System::execute("ls " + path_ + "/bin/icebox_vlog > /dev/null") != 0) {
+//    return false;
+//  }
   return true;
 }
 
@@ -106,10 +97,10 @@ void IcestormServer::run_logic() {
     // Set workers done signal, kill any existing quartus jobs,
     // and wait for the worker to return control here.
     worker_.request_stop();
-    System::execute("killall java > /dev/null 2>&1");
-    System::execute("killall quartus_map > /dev/null 2>&1");
-    System::execute("killall quartus_fit > /dev/null 2>&1");
-    System::execute("killall quartus_asm > /dev/null 2>&1");
+    // Adding theese seems to cause them to be terminated mid-run...
+    //System::execute("killall yosys > /dev/null 2>&1");
+    //System::execute("killall nextpnr-ice40 > /dev/null 2>&1");
+    //System::execute("killall icepack > /dev/null 2>&1");
     worker_.wait_for_stop();
     
     // Create a new socket for this request and rerun the worker.
@@ -136,33 +127,29 @@ void IcestormServer::Worker::run_logic() {
   qs_->buf_.resize(0);
   qs_->sock_->recv(qs_->buf_.data(), size);
 
-
-  ofstream ofs(System::src_root() + "/src/target/core/de10/fpga/ip/program_logic.v");
-  ofs.write(qs_->buf_.data(), size);
-  ofs << endl;
-  ofs.close();
-
   // A message of length 1 signals that no compilation is necessary.
   if (size == 1) {
     return qs_->sock_->send(true);
   }
 
+  ofstream ofs(System::src_root() + "/src/target/core/ice40/fpga/top.v");
+  ofs.write(qs_->buf_.data(), size);
+  ofs << endl;
+  ofs.close();
+
   // Compile everything.
-  if (stop_requested() || System::execute(qs_->path_ + "/sopc_builder/bin/qsys-generate " + System::src_root() + "/src/target/core/de10/fpga/soc_system.qsys --synthesis=VERILOG") != 0) {
+  if (stop_requested() || System::execute(qs_->path_ + "/bin/yosys -p 'synth_ice40 -json " + System::src_root() + "/src/target/core/ice40/fpga/top.json' " + System::src_root() + "/src/target/core/ice40/fpga/top.v") != 0) {
     return qs_->sock_->send(false);
   } 
-  if (stop_requested() || System::execute(qs_->path_ + "/bin/quartus_map " + System::src_root() + "/src/target/core/de10/fpga/DE10_NANO_SoC_GHRD.qpf") != 0) {
+  if (/*stop_requested() ||*/ System::execute(qs_->path_ + "/bin/nextpnr-ice40 --hx8k --json " + System::src_root() + "/src/target/core/ice40/fpga/top.json --asc " + System::src_root() + "/src/target/core/ice40/fpga/top.asc") != 0) {
     return qs_->sock_->send(false);
   } 
-  if (stop_requested() || System::execute(qs_->path_ + "/bin/quartus_fit " + System::src_root() + "/src/target/core/de10/fpga/DE10_NANO_SoC_GHRD.qpf") != 0) {
+  if (/*stop_requested() ||*/ System::execute(qs_->path_ + "/bin/icepack -v " + System::src_root() + "/src/target/core/ice40/fpga/top.asc " + System::src_root() + "/src/target/core/ice40/fpga/top.bin") != 0) {
     return qs_->sock_->send(false);
   } 
-  if (stop_requested() || System::execute(qs_->path_ + "/bin/quartus_asm " + System::src_root() + "/src/target/core/de10/fpga/DE10_NANO_SoC_GHRD.qpf") != 0) {
-    return qs_->sock_->send(false);
-  } 
-  if (System::execute(qs_->path_ + "/bin/quartus_pgm -c \"DE-SoC " + qs_->usb_ + "\" --mode JTAG -o \"P;" + System::src_root() + "/src/target/core/de10/fpga/output_files/DE10_NANO_SoC_GHRD.sof@2\"") != 0) {
-    return qs_->sock_->send(false);
-  }
+  //if (System::execute(qs_->path_ + "/bin/quartus_pgm -c \"DE-SoC " + qs_->usb_ + "\" --mode JTAG -o \"P;" + System::src_root() + "/src/target/core/de10/fpga/output_files/DE10_NANO_SoC_GHRD.sof@2\"") != 0) {
+  //  return qs_->sock_->send(false);
+  //}
   qs_->sock_->send(true);
 }
 
