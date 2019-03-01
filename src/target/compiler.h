@@ -42,6 +42,7 @@ namespace cascade {
 
 class CoreCompiler;
 class De10Compiler;
+class Ice40Compiler;
 class Engine;
 class InterfaceCompiler;
 class LocalCompiler;
@@ -61,6 +62,7 @@ class Compiler {
     // compile() and they cannot be called more than once. Once you configure a
     // compiler, you're stuck with it.
     Compiler& set_de10_compiler(De10Compiler* c);
+    Compiler& set_ice40_compiler(Ice40Compiler* c);
     Compiler& set_proxy_compiler(ProxyCompiler* c);
     Compiler& set_sw_compiler(SwCompiler* c);
 
@@ -97,6 +99,7 @@ class Compiler {
   private:
     // Core Compilers:
     De10Compiler* de10_compiler_;
+    Ice40Compiler* ice40_compiler_;
     ProxyCompiler* proxy_compiler_;
     SwCompiler* sw_compiler_;
 

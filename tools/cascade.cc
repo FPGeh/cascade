@@ -40,6 +40,7 @@
 #include "src/runtime/runtime.h"
 #include "src/target/compiler.h"
 #include "src/target/core/de10/de10_compiler.h"
+#include "src/target/core/ice40/ice40_compiler.h"
 #include "src/target/core/proxy/proxy_compiler.h"
 #include "src/target/core/sw/sw_compiler.h"
 #include "src/target/interface/local/local_compiler.h"
@@ -202,6 +203,9 @@ int main(int argc, char** argv) {
   auto* dc = new De10Compiler();
     dc->set_host(::quartus_host.value());
     dc->set_port(::quartus_port.value());
+  auto* ic = new Ice40Compiler();
+    ic->set_host(::quartus_host.value());
+    ic->set_port(::quartus_port.value());
   auto* pc = new ProxyCompiler();
   auto* sc = new SwCompiler();
     sc->set_include_dirs(::inc_dirs.value() + ":" + System::src_root());
@@ -209,6 +213,7 @@ int main(int argc, char** argv) {
     lc->set_runtime(::runtime);
   auto* c = new Compiler();
     c->set_de10_compiler(dc);
+    c->set_ice40_compiler(ic);
     c->set_proxy_compiler(pc);
     c->set_sw_compiler(sc);
     c->set_local_compiler(lc);

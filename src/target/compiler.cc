@@ -34,6 +34,7 @@
 #include "src/runtime/data_plane.h"
 #include "src/runtime/runtime.h"
 #include "src/target/core/de10/de10_compiler.h"
+#include "src/target/core/ice40/ice40_compiler.h"
 #include "src/target/core/proxy/proxy_compiler.h"
 #include "src/target/core/sw/sw_compiler.h"
 #include "src/target/engine.h"
@@ -109,6 +110,14 @@ Compiler& Compiler::set_de10_compiler(De10Compiler* c) {
   return *this;
 }
 
+Compiler& Compiler::set_ice40_compiler(Ice40Compiler* c) {
+  assert(ice40_compiler_ == nullptr);
+  assert(c != nullptr);
+  ice40_compiler_ = c;
+  ice40_compiler_->set_compiler(this);
+  return *this;
+}
+
 Compiler& Compiler::set_proxy_compiler(ProxyCompiler* c) {
   assert(proxy_compiler_ == nullptr);
   assert(c != nullptr);
@@ -164,6 +173,8 @@ Engine* Compiler::compile(ModuleDeclaration* md) {
     cc = de10_compiler_; 
   } else if (target->eq("sw")) {
     cc = sw_compiler_;
+  } else if (target->eq("ice40")) {
+    cc = ice40_compiler_;
   } else {
     error("Unable to compile module with unsupported target type " + target->get_readable_val());
     delete md;
