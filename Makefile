@@ -13,6 +13,7 @@ PERF=\
 	-O3 -DNDEBUG
 INC=-I. -I./ext/cl
 LIB=-lncurses -lpthread
+CCACHE?=ccache
 
 ### Constants: gtest
 GTEST_ROOT_DIR=ext/googletest/googletest
@@ -46,6 +47,11 @@ OBJ=\
 	src/target/core/de10/module_boxer.o\
 	src/target/core/de10/program_boxer.o\
 	src/target/core/de10/quartus_server.o\
+	src/target/core/ice40/ice40_compiler.o\
+	src/target/core/ice40/ice40_logic.o\
+	src/target/core/ice40/module_boxer.o\
+	src/target/core/ice40/program_boxer.o\
+	src/target/core/ice40/icestorm_server.o\
 	src/target/core/proxy/proxy_compiler.o\
 	src/target/core/sw/sw_compiler.o\
 	src/target/core/sw/sw_logic.o\
@@ -312,27 +318,27 @@ clean:
 
 ### Build rules
 bin/%: tools/%.cc ${FLEX_SRC} ${OBJ} ${HDR}
-	ccache ${CXX} ${CXXFLAGS} ${CXX_OPT} ${PERF} ${INC} $< -o $@ ${OBJ} ${LIB}
+	${CCACHE} ${CXX} ${CXXFLAGS} ${CXX_OPT} ${PERF} ${INC} $< -o $@ ${OBJ} ${LIB}
 ${FLEX_SRC}: src/verilog/parse/verilog.ll ${BISON_SRC} ${HDR}
 	cd src/verilog/parse && flex verilog.ll	
 ${BISON_SRC}: src/verilog/parse/verilog.yy ${HDR}
 	cd src/verilog/parse && bison -d -v verilog.yy
 %.o: %.c ${FLEX_SRC} ${BISON_SRC} ${HDR}
-	ccache ${CC} ${CFLAGS} ${CC_OPT} ${PERF} ${GTEST_INC} ${INC} -c $< -o $@
+	${CCACHE} ${CC} ${CFLAGS} ${CC_OPT} ${PERF} ${GTEST_INC} ${INC} -c $< -o $@
 %.o: %.cc ${FLEX_SRC} ${BISON_SRC} ${HDR}
-	ccache ${CXX} ${CXXFLAGS} ${CXX_OPT} ${PERF} ${GTEST_INC} ${INC} -c $< -o $@
+	${CCACHE} ${CXX} ${CXXFLAGS} ${CXX_OPT} ${PERF} ${GTEST_INC} ${INC} -c $< -o $@
 ${GTEST_LIB}: 
 	mkdir -p ${GTEST_BUILD_DIR}
 	cd ${GTEST_BUILD_DIR} && CFLAGS=${CFLAGS} CXXFLAGS=${CXXFLAGS} cmake .. && make
 ${TEST_TARGET}: ${FLEX_SRC} ${OBJ} ${HDR} ${TEST_OBJ} ${GTEST_LIB} ${GTEST_MAIN}
-	ccache ${CXX} ${CXXFLAGS} ${CXX_OPT} ${PERF} -o $@ ${TEST_OBJ} ${OBJ} ${GTEST_LIB} ${GTEST_MAIN} ${LIB} 
+	${CCACHE} ${CXX} ${CXXFLAGS} ${CXX_OPT} ${PERF} -o $@ ${TEST_OBJ} ${OBJ} ${GTEST_LIB} ${GTEST_MAIN} ${LIB} 
 ${BMARK_TARGET}: ${FLEX_SRC} ${OBJ} ${HDR} ${BMARK_OBJ} ${GTEST_LIB} ${GTEST_MAIN}
-	ccache ${CXX} ${CXXFLAGS} ${CXX_OPT} ${PERF} -o $@ ${BMARK_OBJ} ${OBJ} ${GTEST_LIB} ${GTEST_MAIN} ${LIB} 
+	${CCACHE} ${CXX} ${CXXFLAGS} ${CXX_OPT} ${PERF} -o $@ ${BMARK_OBJ} ${OBJ} ${GTEST_LIB} ${GTEST_MAIN} ${LIB} 
 
 ### Misc rules for targets that we don't control the source for
 ext/mongoose/mongoose.o: ext/mongoose/mongoose.c
-	ccache ${CC} ${CFLAGS} ${CC_OPT} ${PERF} -Wno-array-bounds -Wno-sign-compare -Wno-unused-parameter -Wno-format -Wno-format-pedantic ${GTEST_INC} ${INC} -c $< -o $@
+	${CCACHE} ${CC} ${CFLAGS} ${CC_OPT} ${PERF} -Wno-array-bounds -Wno-sign-compare -Wno-unused-parameter -Wno-format -Wno-format-pedantic ${GTEST_INC} ${INC} -c $< -o $@
 src/verilog/parse/lex.yy.o: src/verilog/parse/lex.yy.cc 
-	ccache ${CXX} ${CXXFLAGS} ${CXX_OPT} -march=native -Wno-null-conversion -fno-stack-protector -O3 -DNDEBUG -Wno-sign-compare ${GTEST_INC} ${INC} -c $< -o $@
+	${CCACHE} ${CXX} ${CXXFLAGS} ${CXX_OPT} -march=native -Wno-null-conversion -fno-stack-protector -O3 -DNDEBUG -Wno-sign-compare ${GTEST_INC} ${INC} -c $< -o $@
 src/verilog/parse/verilog.tab.o: src/verilog/parse/verilog.tab.cc
-	ccache ${CXX} ${CXXFLAGS} ${CXX_OPT} -march=native -fno-stack-protector -O3 -DNDEBUG  ${GTEST_INC} ${INC} -c $< -o $@
+	${CCACHE} ${CXX} ${CXXFLAGS} ${CXX_OPT} -march=native -fno-stack-protector -O3 -DNDEBUG  ${GTEST_INC} ${INC} -c $< -o $@
