@@ -295,6 +295,7 @@ void ModuleBoxerIce40::emit_variable_table(indstream& os) {
   // so few in number that this isn't a huge deal.
     
   os << "// Variable Table:" << endl;
+  os << "(* mem2reg *)" << endl; // Temporary workaround for Yosys (https://github.com/YosysHQ/yosys/pull/843)
   os << "reg[31:0] __var[" << de_->open_loop_idx() << ":0];" << endl;
   os << endl;
 }
