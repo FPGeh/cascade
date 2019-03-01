@@ -132,19 +132,26 @@ void IcestormServer::Worker::run_logic() {
     return qs_->sock_->send(true);
   }
 
-  ofstream ofs(System::src_root() + "/src/target/core/ice40/fpga/top.v");
+  ofstream ofs(System::src_root() + "/src/target/core/ice40/fpga/program_logic.v");
   ofs.write(qs_->buf_.data(), size);
   ofs << endl;
   ofs.close();
 
   // Compile everything.
-  if (stop_requested() || System::execute(qs_->path_ + "/bin/yosys -p 'synth_ice40 -json " + System::src_root() + "/src/target/core/ice40/fpga/top.json' " + System::src_root() + "/src/target/core/ice40/fpga/top.v") != 0) {
+  if (stop_requested() || System::execute(qs_->path_ + "/bin/yosys -p 'synth_ice40 -top top -json " + System::src_root() + "/src/target/core/ice40/fpga/top.json' "
+                                                                   + System::src_root() + "/src/target/core/ice40/fpga/top.v "
+                                                                   + System::src_root() + "/src/target/core/ice40/fpga/program_logic.v") != 0) {
     return qs_->sock_->send(false);
   } 
-  if (/*stop_requested() ||*/ System::execute(qs_->path_ + "/bin/nextpnr-ice40 --hx8k --json " + System::src_root() + "/src/target/core/ice40/fpga/top.json --asc " + System::src_root() + "/src/target/core/ice40/fpga/top.asc") != 0) {
+  if (/*stop_requested() ||*/ System::execute(qs_->path_ + "/bin/nextpnr-ice40 --up5k --freq 12 "
+                                                                               + "--json " + System::src_root() + "/src/target/core/ice40/fpga/top.json "
+                                                                               + "--asc " + System::src_root() + "/src/target/core/ice40/fpga/top.asc "
+                                                                               + "--pcf " + System::src_root() + "/src/target/core/ice40/fpga/top.pcf "
+                                                                               + "--pcf-allow-unconstrained" ) != 0) {
     return qs_->sock_->send(false);
   } 
-  if (/*stop_requested() ||*/ System::execute(qs_->path_ + "/bin/icepack -v " + System::src_root() + "/src/target/core/ice40/fpga/top.asc " + System::src_root() + "/src/target/core/ice40/fpga/top.bin") != 0) {
+  if (/*stop_requested() ||*/ System::execute(qs_->path_ + "/bin/icepack -v " + System::src_root() + "/src/target/core/ice40/fpga/top.asc "
+                                                                              + System::src_root() + "/src/target/core/ice40/fpga/top.bin") != 0) {
     return qs_->sock_->send(false);
   } 
   //if (System::execute(qs_->path_ + "/bin/quartus_pgm -c \"DE-SoC " + qs_->usb_ + "\" --mode JTAG -o \"P;" + System::src_root() + "/src/target/core/de10/fpga/output_files/DE10_NANO_SoC_GHRD.sof@2\"") != 0) {
