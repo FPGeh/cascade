@@ -28,30 +28,30 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef CASCADE_SRC_TARGET_CORE_ICE40_ICE40_LED_H
-#define CASCADE_SRC_TARGET_CORE_ICE40_ICE40_LED_H
+#ifndef CASCADE_SRC_TARGET_CORE_ICE40_ICE40_PAD_H
+#define CASCADE_SRC_TARGET_CORE_ICE40_ICE40_PAD_H
 
+#include <cassert>
 #include "src/base/bits/bits.h"
 #include "src/target/core.h"
-#include "src/target/core/ice40/io.h"
+#include "src/target/core/icebrk/io.h"
 #include "src/target/input.h"
-#include "src/target/state.h"
+#include "src/target/interface.h"
 
 namespace cascade {
 
-// This file implements an LED engine for the Terasic ICE40-Nano board.  It
-// supports LED0-LED7 from the FPGA side, and it requires a PIO core be
-// available at 0x3000, which is where it is mapped tn the ICE40_NANO GHRD.
- 
-class Ice40Led : public Led {
+class IcebrkPad : public Pad {
   public:
-    Ice40Led(Interface* interface, VId in, volatile uint8_t* led_addr); 
-    ~Ice40Led() override = default;
+    IcebrkPad(Interface* interface, VId out, size_t size, volatile uint8_t* pad_addr); 
+    ~IcebrkPad() override = default;
 
     State* get_state() override;
     void set_state(const State* s) override;
     Input* get_input() override;
     void set_input(const Input* i) override;
+
+    bool overrides_done_step() const override;
+    void done_step() override;
 
     void read(VId id, const Bits* b) override;
     void evaluate() override;
@@ -59,52 +59,65 @@ class Ice40Led : public Led {
     void update() override;
 
   private:
-    VId in_;
-    volatile uint8_t* led_addr_;
+    VId out_;
+    size_t size_;
+    volatile uint8_t* pad_addr_;
+    bool there_are_updates_;
 };
 
-inline Ice40Led::Ice40Led(Interface* interface, VId in, volatile uint8_t* led_addr) : Led(interface) {
-  in_ = in;
-  led_addr_ = led_addr;
+inline IcebrkPad::IcebrkPad(Interface* interface, VId out, size_t size, volatile uint8_t* pad_addr) : Pad(interface) {
+  out_ = out;
+  size_ = size;
+  pad_addr_ = pad_addr;
+  there_are_updates_ = true;
 }
 
-inline State* Ice40Led::get_state() {
+inline State* IcebrkPad::get_state() {
   return new State();
 } 
 
-inline void Ice40Led::set_state(const State* s) {
+inline void IcebrkPad::set_state(const State* s) {
   // Stateless; does nothing
   (void) s;
 }
 
-inline Input* Ice40Led::get_input() {
-  auto* i = new Input();
-  i->insert(in_, Bits(32, ICE40_READ(led_addr_)));
-  return i;
+inline Input* IcebrkPad::get_input() {
+  // Outputs only; does nothing
+  return new Input();
 } 
 
-inline void Ice40Led::set_input(const Input* i) {
-  const auto itr = i->find(in_);
-  if (itr != i->end()) {
-    ICE40_WRITE(led_addr_, itr->second.to_int());
-  }
+inline void IcebrkPad::set_input(const Input* i) {
+  // Outputs only; does nothing
+  (void) i;
 }
 
-inline void Ice40Led::read(VId id, const Bits* b) {
+inline bool IcebrkPad::overrides_done_step() const {
+  return true;
+}
+
+inline void IcebrkPad::done_step() {
+  there_are_updates_ = true;
+}
+
+inline void IcebrkPad::read(VId id, const Bits* b) {
+  // Invoking this method doesn't make sense
   (void) id;
-  ICE40_WRITE(led_addr_, b->to_int());
+  (void) b;
+  assert(false);
 }
 
-inline void Ice40Led::evaluate() {
-  // Does nothing.
+inline void IcebrkPad::evaluate() {
+  Bits bits(size_, ICE40_READ(pad_addr_));
+  interface()->write(out_, &bits);
 }
 
-inline bool Ice40Led::there_are_updates() const {
-  return false;
+inline bool IcebrkPad::there_are_updates() const {
+  return there_are_updates_;
 }
 
-inline void Ice40Led::update() { 
-  // Does nothing.
+inline void IcebrkPad::update() { 
+  there_are_updates_ = false;
+  evaluate();
 }
 
 } // namespace cascade

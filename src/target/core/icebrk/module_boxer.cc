@@ -28,7 +28,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/target/core/ice40/module_boxer.h"
+#include "src/target/core/icebrk/module_boxer.h"
 
 #include <cassert>
 #include <sstream>
@@ -41,7 +41,7 @@ using namespace std;
 
 namespace cascade {
 
-std::string ModuleBoxerIce40::box(MId id, const ModuleDeclaration* md, const Ice40Logic* de) {
+std::string ModuleBoxerIcebrk::box(MId id, const ModuleDeclaration* md, const IcebrkLogic* de) {
   md_ = md;
   de_ = de;
 
@@ -77,13 +77,13 @@ std::string ModuleBoxerIce40::box(MId id, const ModuleDeclaration* md, const Ice
   return ss.str();
 }
 
-Attributes* ModuleBoxerIce40::build(const Attributes* as) {
+Attributes* ModuleBoxerIcebrk::build(const Attributes* as) {
   // Quartus doesn't have full support for annotations. At this point, we can just delete them.
   (void) as;
   return new Attributes();
 }
 
-ModuleItem* ModuleBoxerIce40::build(const InitialConstruct* ic) {
+ModuleItem* ModuleBoxerIcebrk::build(const InitialConstruct* ic) {
   // If we're seeing a non-ignored initial block here, it's a problem.  These
   // should have been handled in software.
   const auto* ign = ic->get_attrs()->get<String>("__ignore"); 
@@ -95,20 +95,20 @@ ModuleItem* ModuleBoxerIce40::build(const InitialConstruct* ic) {
   return nullptr; 
 }
 
-ModuleItem* ModuleBoxerIce40::build(const RegDeclaration* rd) {
+ModuleItem* ModuleBoxerIcebrk::build(const RegDeclaration* rd) {
   // Stateful variables have been reified to views and can be ignored.
   // Everything else is downgraded to a regular declaration.
   return ModuleInfo(md_).is_stateful(rd->get_id()) ? nullptr : rd->clone();
 }
 
-ModuleItem* ModuleBoxerIce40::build(const PortDeclaration* pd) {
+ModuleItem* ModuleBoxerIcebrk::build(const PortDeclaration* pd) {
   // Stateful variables and inputs have been reified to views and can be ignored.
   // Everything else is downgraded to a regular declaration.
   ModuleInfo info(md_);
   return (info.is_stateful(pd->get_decl()->get_id()) || info.is_input(pd->get_decl()->get_id())) ? nullptr : pd->get_decl()->clone();
 }
 
-Statement* ModuleBoxerIce40::build(const NonblockingAssign* na) {
+Statement* ModuleBoxerIcebrk::build(const NonblockingAssign* na) {
   // Create empty blocks for true and false branches (we'll never populate the
   // false branch)
   auto* t = new SeqBlock();
@@ -153,19 +153,19 @@ Statement* ModuleBoxerIce40::build(const NonblockingAssign* na) {
   return new ConditionalStatement(new Identifier("__live"), t, f);
 }
 
-Statement* ModuleBoxerIce40::build(const DisplayStatement* ds) {
+Statement* ModuleBoxerIcebrk::build(const DisplayStatement* ds) {
   return Mangler(de_).mangle(task_id_++, ds->begin_args(), ds->end_args());
 }
 
-Statement* ModuleBoxerIce40::build(const FinishStatement* fs) {
+Statement* ModuleBoxerIcebrk::build(const FinishStatement* fs) {
   return Mangler(de_).mangle(task_id_++, fs->get_arg());
 }
 
-Statement* ModuleBoxerIce40::build(const WriteStatement* ws) {
+Statement* ModuleBoxerIcebrk::build(const WriteStatement* ws) {
   return Mangler(de_).mangle(task_id_++, ws->begin_args(), ws->end_args());
 }
 
-Expression* ModuleBoxerIce40::get_table_range(const Identifier* r, const Identifier *i) {
+Expression* ModuleBoxerIcebrk::get_table_range(const Identifier* r, const Identifier *i) {
   // Look up r in the variable table
   const auto titr = de_->table_find(r);
   assert(titr != de_->table_end());
@@ -192,18 +192,18 @@ Expression* ModuleBoxerIce40::get_table_range(const Identifier* r, const Identif
   return new RangeExpression(idx, RangeExpression::Type::PLUS, new Number(Bits(32, titr->second.element_size())));
 }
 
-ModuleBoxerIce40::Mangler::Mangler(const Ice40Logic* de) : Visitor() {
+ModuleBoxerIcebrk::Mangler::Mangler(const IcebrkLogic* de) : Visitor() {
   de_ = de;
   t_ = nullptr;
 }
 
-Statement* ModuleBoxerIce40::Mangler::mangle(size_t id, const Node* arg) {
+Statement* ModuleBoxerIcebrk::Mangler::mangle(size_t id, const Node* arg) {
   init(id);
   arg->accept(this);
   return new ConditionalStatement(new Identifier("__live"), t_, new SeqBlock());
 }
 
-void ModuleBoxerIce40::Mangler::init(size_t id) {
+void ModuleBoxerIcebrk::Mangler::init(size_t id) {
   // Initialize the sequential block which we'll populate during recursive descent
   t_ = new SeqBlock();
   // Insert an assignment to the task mask for this task id
@@ -224,7 +224,7 @@ void ModuleBoxerIce40::Mangler::init(size_t id) {
   ));
 }
 
-void ModuleBoxerIce40::Mangler::visit(const Identifier* id) {
+void ModuleBoxerIcebrk::Mangler::visit(const Identifier* id) {
   const auto titr = de_->table_find(id);
   assert(titr != de_->table_end());
 
@@ -282,7 +282,7 @@ void ModuleBoxerIce40::Mangler::visit(const Identifier* id) {
   }
 }
 
-void ModuleBoxerIce40::emit_variable_table(indstream& os) {
+void ModuleBoxerIcebrk::emit_variable_table(indstream& os) {
   // Declare the variable table for this module. Contains enough storage for
   // all inputs and stateful variables in this module. Note that (1) stateful
   // elements should NEVER include any inputs and (2) stateful elements may
@@ -300,7 +300,7 @@ void ModuleBoxerIce40::emit_variable_table(indstream& os) {
   os << endl;
 }
 
-void ModuleBoxerIce40::emit_update_state(indstream& os, ModuleInfo& info) {
+void ModuleBoxerIcebrk::emit_update_state(indstream& os, ModuleInfo& info) {
   // Declare intermediate state for stateful elements. This is where we will
   // store update values while we wait for the update latch to be set. 
 
@@ -319,7 +319,7 @@ void ModuleBoxerIce40::emit_update_state(indstream& os, ModuleInfo& info) {
   os << endl;
 }
 
-void ModuleBoxerIce40::emit_sys_task_state(indstream& os) {
+void ModuleBoxerIcebrk::emit_sys_task_state(indstream& os) {
   // Declare intermediate state for systasks. This is where we will store
   // notification flags for tasks while we wait for the user to query for
   // events.
@@ -330,7 +330,7 @@ void ModuleBoxerIce40::emit_sys_task_state(indstream& os) {
   os << endl;
 }
 
-void ModuleBoxerIce40::emit_control_state(indstream& os) {
+void ModuleBoxerIcebrk::emit_control_state(indstream& os) {
   // Declare control variables. These are used to communicate execution state
   // back and forth with the host. 
   
@@ -341,7 +341,7 @@ void ModuleBoxerIce40::emit_control_state(indstream& os) {
   os << endl;
 }
 
-void ModuleBoxerIce40::emit_view_variables(indstream& os) {
+void ModuleBoxerIcebrk::emit_view_variables(indstream& os) {
   // Define view variables on top of the variable table for inputs and stateful
   // elements. This will allow the program to reference inputs and stateful
   // elements in the variable table without modification.
@@ -359,7 +359,7 @@ void ModuleBoxerIce40::emit_view_variables(indstream& os) {
   os << endl;
 }
 
-void ModuleBoxerIce40::emit_view_decl(indstream& os, const Ice40Logic::VarInfo& vinfo) {
+void ModuleBoxerIcebrk::emit_view_decl(indstream& os, const IcebrkLogic::VarInfo& vinfo) {
   const RangeExpression* re = nullptr;
   auto is_signed = false;
   if (vinfo.id()->get_parent()->is(Node::Tag::net_declaration)) {
@@ -383,7 +383,7 @@ void ModuleBoxerIce40::emit_view_decl(indstream& os, const Ice40Logic::VarInfo& 
   TextPrinter(os) << " " << vinfo.id() << ";\n";
 }
 
-void ModuleBoxerIce40::emit_view_init(indstream& os, const Ice40Logic::VarInfo& vinfo) {
+void ModuleBoxerIcebrk::emit_view_init(indstream& os, const IcebrkLogic::VarInfo& vinfo) {
   const auto arity = vinfo.arity();
   for (size_t i = 0, ie = vinfo.elements(); i < ie; ++i) {
     os << "assign " << vinfo.id()->front_ids()->get_readable_sid();
@@ -399,7 +399,7 @@ void ModuleBoxerIce40::emit_view_init(indstream& os, const Ice40Logic::VarInfo& 
   }
 }
 
-void ModuleBoxerIce40::emit_subscript(indstream& os, size_t idx, size_t n, const vector<size_t>& arity) {
+void ModuleBoxerIcebrk::emit_subscript(indstream& os, size_t idx, size_t n, const vector<size_t>& arity) {
   for (auto a : arity) {
     n /= a;
     const auto i = idx / n;
@@ -408,7 +408,7 @@ void ModuleBoxerIce40::emit_subscript(indstream& os, size_t idx, size_t n, const
   }
 }
 
-void ModuleBoxerIce40::emit_program_logic(indstream& os) {
+void ModuleBoxerIcebrk::emit_program_logic(indstream& os) {
   // Emit the original program logic. The builder interface for this class is
   // used to make several small modifications to the program text. Declarations
   // for inputs and stateful elements are removed (they were converted to view
@@ -428,7 +428,7 @@ void ModuleBoxerIce40::emit_program_logic(indstream& os) {
   os << endl;
 }
 
-void ModuleBoxerIce40::emit_update_logic(indstream& os) {
+void ModuleBoxerIcebrk::emit_update_logic(indstream& os) {
   // Logic for updates. An update is pending whenever an intermediate
   // value differs from its stateful counterpart. Updates are triggered
   // whenever the user forces a read of the update latch or we are in open loop
@@ -446,7 +446,7 @@ void ModuleBoxerIce40::emit_update_logic(indstream& os) {
   os << endl;
 }
 
-void ModuleBoxerIce40::emit_sys_task_logic(indstream& os) {
+void ModuleBoxerIcebrk::emit_sys_task_logic(indstream& os) {
   // Logic for systasks. The task mask is cleared whenever the user forces a
   // read of the mask.
 
@@ -461,7 +461,7 @@ void ModuleBoxerIce40::emit_sys_task_logic(indstream& os) {
   os << endl;
 }
 
-void ModuleBoxerIce40::emit_control_logic(indstream& os) {
+void ModuleBoxerIcebrk::emit_control_logic(indstream& os) {
   // Logic for control variables. The live and open variables are set in
   // response to user initiated reads.  The open loop iteration counter is
   // reset whenever we go into open loop and ticks whenever we are in open loop
@@ -480,7 +480,7 @@ void ModuleBoxerIce40::emit_control_logic(indstream& os) {
   os << endl;
 }
 
-void ModuleBoxerIce40::emit_variable_table_logic(indstream& os, ModuleInfo& info) {
+void ModuleBoxerIcebrk::emit_variable_table_logic(indstream& os, ModuleInfo& info) {
   // Logic for the variable table.  Requesting a read of a specific variable
   // overwrites its value.  Requesting an update forces all stateful variables
   // to latch the values of their counterparts.  In all other cases, variables
@@ -530,7 +530,7 @@ void ModuleBoxerIce40::emit_variable_table_logic(indstream& os, ModuleInfo& info
   os << endl;
 }
 
-void ModuleBoxerIce40::emit_slice(indstream& os, size_t w, size_t i) {
+void ModuleBoxerIcebrk::emit_slice(indstream& os, size_t w, size_t i) {
   const auto upper = min(32*(i+1),w)-1;
   const auto lower = 32*i;
   if (upper == 0) {
@@ -542,7 +542,7 @@ void ModuleBoxerIce40::emit_slice(indstream& os, size_t w, size_t i) {
   }
 }
 
-void ModuleBoxerIce40::emit_output_logic(indstream& os) {
+void ModuleBoxerIcebrk::emit_output_logic(indstream& os) {
   // Output logic. Controls which parts of which variables are propagated to
   // out in response to the value of vid.
 

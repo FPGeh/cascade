@@ -28,25 +28,25 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef CASCADE_SRC_TARGET_CORE_ICE40_ICE40_GPIO_H
-#define CASCADE_SRC_TARGET_CORE_ICE40_ICE40_GPIO_H
+#ifndef CASCADE_SRC_TARGET_CORE_ICE40_ICE40_LED_H
+#define CASCADE_SRC_TARGET_CORE_ICE40_ICE40_LED_H
 
 #include "src/base/bits/bits.h"
 #include "src/target/core.h"
-#include "src/target/core/ice40/io.h"
+#include "src/target/core/icebrk/io.h"
 #include "src/target/input.h"
 #include "src/target/state.h"
 
 namespace cascade {
 
-// This file implements a GPIO engine for the Terasic ICE40-Nano board.  It
-// supports GPI0-GPIO31 from the FPGA side, and it requires a PIO core be
-// available at 0x5000, which is where it is mapped tn the ICE40_NANO GHRD.
+// This file implements an LED engine for the Terasic ICE40-Nano board.  It
+// supports LED0-LED7 from the FPGA side, and it requires a PIO core be
+// available at 0x3000, which is where it is mapped tn the ICE40_NANO GHRD.
  
-class Ice40Gpio : public Gpio {
+class IcebrkLed : public Led {
   public:
-    Ice40Gpio(Interface* interface, VId in, volatile uint8_t* gpio_addr); 
-    ~Ice40Gpio() override = default;
+    IcebrkLed(Interface* interface, VId in, volatile uint8_t* led_addr); 
+    ~IcebrkLed() override = default;
 
     State* get_state() override;
     void set_state(const State* s) override;
@@ -60,54 +60,53 @@ class Ice40Gpio : public Gpio {
 
   private:
     VId in_;
-    volatile uint8_t* gpio_addr_;
+    volatile uint8_t* led_addr_;
 };
 
-inline Ice40Gpio::Ice40Gpio(Interface* interface, VId in, volatile uint8_t* gpio_addr) : Gpio(interface) {
+inline IcebrkLed::IcebrkLed(Interface* interface, VId in, volatile uint8_t* led_addr) : Led(interface) {
   in_ = in;
-  gpio_addr_ = gpio_addr;
+  led_addr_ = led_addr;
 }
 
-inline State* Ice40Gpio::get_state() {
+inline State* IcebrkLed::get_state() {
   return new State();
 } 
 
-inline void Ice40Gpio::set_state(const State* s) {
+inline void IcebrkLed::set_state(const State* s) {
   // Stateless; does nothing
   (void) s;
 }
 
-inline Input* Ice40Gpio::get_input() {
+inline Input* IcebrkLed::get_input() {
   auto* i = new Input();
-  i->insert(in_, Bits(32, ICE40_READ(gpio_addr_)));
+  i->insert(in_, Bits(32, ICE40_READ(led_addr_)));
   return i;
 } 
 
-inline void Ice40Gpio::set_input(const Input* i) {
+inline void IcebrkLed::set_input(const Input* i) {
   const auto itr = i->find(in_);
   if (itr != i->end()) {
-    ICE40_WRITE(gpio_addr_, itr->second.to_int());
+    ICE40_WRITE(led_addr_, itr->second.to_int());
   }
 }
 
-inline void Ice40Gpio::read(VId id, const Bits* b) {
+inline void IcebrkLed::read(VId id, const Bits* b) {
   (void) id;
-  ICE40_WRITE(gpio_addr_, b->to_int());
+  ICE40_WRITE(led_addr_, b->to_int());
 }
 
-inline void Ice40Gpio::evaluate() {
+inline void IcebrkLed::evaluate() {
   // Does nothing.
 }
 
-inline bool Ice40Gpio::there_are_updates() const {
+inline bool IcebrkLed::there_are_updates() const {
   return false;
 }
 
-inline void Ice40Gpio::update() { 
+inline void IcebrkLed::update() { 
   // Does nothing.
 }
 
 } // namespace cascade
 
 #endif
-

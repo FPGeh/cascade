@@ -28,30 +28,30 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef CASCADE_SRC_TARGET_CORE_ICE40_ICE40_PAD_H
-#define CASCADE_SRC_TARGET_CORE_ICE40_ICE40_PAD_H
+#ifndef CASCADE_SRC_TARGET_CORE_ICE40_ICE40_GPIO_H
+#define CASCADE_SRC_TARGET_CORE_ICE40_ICE40_GPIO_H
 
-#include <cassert>
 #include "src/base/bits/bits.h"
 #include "src/target/core.h"
-#include "src/target/core/ice40/io.h"
+#include "src/target/core/icebrk/io.h"
 #include "src/target/input.h"
-#include "src/target/interface.h"
+#include "src/target/state.h"
 
 namespace cascade {
 
-class Ice40Pad : public Pad {
+// This file implements a GPIO engine for the Terasic ICE40-Nano board.  It
+// supports GPI0-GPIO31 from the FPGA side, and it requires a PIO core be
+// available at 0x5000, which is where it is mapped tn the ICE40_NANO GHRD.
+ 
+class IcebrkGpio : public Gpio {
   public:
-    Ice40Pad(Interface* interface, VId out, size_t size, volatile uint8_t* pad_addr); 
-    ~Ice40Pad() override = default;
+    IcebrkGpio(Interface* interface, VId in, volatile uint8_t* gpio_addr); 
+    ~IcebrkGpio() override = default;
 
     State* get_state() override;
     void set_state(const State* s) override;
     Input* get_input() override;
     void set_input(const Input* i) override;
-
-    bool overrides_done_step() const override;
-    void done_step() override;
 
     void read(VId id, const Bits* b) override;
     void evaluate() override;
@@ -59,67 +59,55 @@ class Ice40Pad : public Pad {
     void update() override;
 
   private:
-    VId out_;
-    size_t size_;
-    volatile uint8_t* pad_addr_;
-    bool there_are_updates_;
+    VId in_;
+    volatile uint8_t* gpio_addr_;
 };
 
-inline Ice40Pad::Ice40Pad(Interface* interface, VId out, size_t size, volatile uint8_t* pad_addr) : Pad(interface) {
-  out_ = out;
-  size_ = size;
-  pad_addr_ = pad_addr;
-  there_are_updates_ = true;
+inline IcebrkGpio::IcebrkGpio(Interface* interface, VId in, volatile uint8_t* gpio_addr) : Gpio(interface) {
+  in_ = in;
+  gpio_addr_ = gpio_addr;
 }
 
-inline State* Ice40Pad::get_state() {
+inline State* IcebrkGpio::get_state() {
   return new State();
 } 
 
-inline void Ice40Pad::set_state(const State* s) {
+inline void IcebrkGpio::set_state(const State* s) {
   // Stateless; does nothing
   (void) s;
 }
 
-inline Input* Ice40Pad::get_input() {
-  // Outputs only; does nothing
-  return new Input();
+inline Input* IcebrkGpio::get_input() {
+  auto* i = new Input();
+  i->insert(in_, Bits(32, ICE40_READ(gpio_addr_)));
+  return i;
 } 
 
-inline void Ice40Pad::set_input(const Input* i) {
-  // Outputs only; does nothing
-  (void) i;
+inline void IcebrkGpio::set_input(const Input* i) {
+  const auto itr = i->find(in_);
+  if (itr != i->end()) {
+    ICE40_WRITE(gpio_addr_, itr->second.to_int());
+  }
 }
 
-inline bool Ice40Pad::overrides_done_step() const {
-  return true;
-}
-
-inline void Ice40Pad::done_step() {
-  there_are_updates_ = true;
-}
-
-inline void Ice40Pad::read(VId id, const Bits* b) {
-  // Invoking this method doesn't make sense
+inline void IcebrkGpio::read(VId id, const Bits* b) {
   (void) id;
-  (void) b;
-  assert(false);
+  ICE40_WRITE(gpio_addr_, b->to_int());
 }
 
-inline void Ice40Pad::evaluate() {
-  Bits bits(size_, ICE40_READ(pad_addr_));
-  interface()->write(out_, &bits);
+inline void IcebrkGpio::evaluate() {
+  // Does nothing.
 }
 
-inline bool Ice40Pad::there_are_updates() const {
-  return there_are_updates_;
+inline bool IcebrkGpio::there_are_updates() const {
+  return false;
 }
 
-inline void Ice40Pad::update() { 
-  there_are_updates_ = false;
-  evaluate();
+inline void IcebrkGpio::update() { 
+  // Does nothing.
 }
 
 } // namespace cascade
 
 #endif
+

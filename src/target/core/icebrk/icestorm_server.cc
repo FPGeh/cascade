@@ -28,7 +28,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/target/core/ice40/icestorm_server.h"
+#include "src/target/core/icebrk/icestorm_server.h"
 
 #include <fstream>
 #include "src/base/socket/socket.h"
@@ -132,26 +132,26 @@ void IcestormServer::Worker::run_logic() {
     return qs_->sock_->send(true);
   }
 
-  ofstream ofs(System::src_root() + "/src/target/core/ice40/fpga/program_logic.v");
+  ofstream ofs(System::src_root() + "/src/target/core/icebrk/fpga/program_logic.v");
   ofs.write(qs_->buf_.data(), size);
   ofs << endl;
   ofs.close();
 
   // Compile everything.
-  if (stop_requested() || System::execute(qs_->path_ + "/bin/yosys -p 'synth_ice40 -top top -json " + System::src_root() + "/src/target/core/ice40/fpga/top.json' "
-                                                                   + System::src_root() + "/src/target/core/ice40/fpga/top.v "
-                                                                   + System::src_root() + "/src/target/core/ice40/fpga/program_logic.v") != 0) {
+  if (stop_requested() || System::execute(qs_->path_ + "/bin/yosys -p 'synth_ice40 -top top -json " + System::src_root() + "/src/target/core/icebrk/fpga/top.json' "
+                                                                   + System::src_root() + "/src/target/core/icebrk/fpga/top.v "
+                                                                   + System::src_root() + "/src/target/core/icebrk/fpga/program_logic.v") != 0) {
     return qs_->sock_->send(false);
   } 
   if (/*stop_requested() ||*/ System::execute(qs_->path_ + "/bin/nextpnr-ice40 --up5k --freq 12 "
-                                                                               + "--json " + System::src_root() + "/src/target/core/ice40/fpga/top.json "
-                                                                               + "--asc " + System::src_root() + "/src/target/core/ice40/fpga/top.asc "
-                                                                               + "--pcf " + System::src_root() + "/src/target/core/ice40/fpga/top.pcf "
+                                                                               + "--json " + System::src_root() + "/src/target/core/icebrk/fpga/top.json "
+                                                                               + "--asc " + System::src_root() + "/src/target/core/icebrk/fpga/top.asc "
+                                                                               + "--pcf " + System::src_root() + "/src/target/core/icebrk/fpga/top.pcf "
                                                                                + "--pcf-allow-unconstrained" ) != 0) {
     return qs_->sock_->send(false);
   } 
-  if (/*stop_requested() ||*/ System::execute(qs_->path_ + "/bin/icepack -v " + System::src_root() + "/src/target/core/ice40/fpga/top.asc "
-                                                                              + System::src_root() + "/src/target/core/ice40/fpga/top.bin") != 0) {
+  if (/*stop_requested() ||*/ System::execute(qs_->path_ + "/bin/icepack -v " + System::src_root() + "/src/target/core/icebrk/fpga/top.asc "
+                                                                              + System::src_root() + "/src/target/core/icebrk/fpga/top.bin") != 0) {
     return qs_->sock_->send(false);
   } 
   //if (System::execute(qs_->path_ + "/bin/quartus_pgm -c \"DE-SoC " + qs_->usb_ + "\" --mode JTAG -o \"P;" + System::src_root() + "/src/target/core/de10/fpga/output_files/DE10_NANO_SoC_GHRD.sof@2\"") != 0) {

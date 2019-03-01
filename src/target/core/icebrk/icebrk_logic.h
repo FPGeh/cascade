@@ -40,7 +40,7 @@
 
 namespace cascade {
 
-class Ice40Logic : public Logic, public Visitor {
+class IcebrkLogic : public Logic, public Visitor {
   public:
     class VarInfo {
       public:
@@ -75,13 +75,13 @@ class Ice40Logic : public Logic, public Visitor {
     typedef std::unordered_map<const Identifier*, VarInfo>::const_iterator table_iterator;
 
     // Constructors:
-    Ice40Logic(Interface* interface, ModuleDeclaration* md, volatile uint8_t* addr);
-    ~Ice40Logic() override;
+    IcebrkLogic(Interface* interface, ModuleDeclaration* md, volatile uint8_t* addr);
+    ~IcebrkLogic() override;
 
     // Configuration Methods:
-    Ice40Logic& set_input(const Identifier* id, VId vid);
-    Ice40Logic& set_state(const Identifier* id, VId vid);
-    Ice40Logic& set_output(const Identifier* id, VId vid);
+    IcebrkLogic& set_input(const Identifier* id, VId vid);
+    IcebrkLogic& set_state(const Identifier* id, VId vid);
+    IcebrkLogic& set_output(const Identifier* id, VId vid);
 
     // Core Interface:
     State* get_state() override;
@@ -163,17 +163,17 @@ class Ice40Logic : public Logic, public Visitor {
 
     // Inserts the identifiers in an AST subtree into the variable table.
     struct Inserter : Visitor {
-      explicit Inserter(Ice40Logic* de);
+      explicit Inserter(IcebrkLogic* de);
       ~Inserter() override = default;
       void visit(const Identifier* id) override;
-      Ice40Logic* de_;
+      IcebrkLogic* de_;
     };
     // Synchronizes the values for the identifiers in an AST subtree.
     struct Sync : Visitor {
-      explicit Sync(Ice40Logic* de);
+      explicit Sync(IcebrkLogic* de);
       ~Sync() override = default;
       void visit(const Identifier* id) override;
-      Ice40Logic* de_;
+      IcebrkLogic* de_;
     };
 };
 

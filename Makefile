@@ -9,8 +9,9 @@ CXX_OPT=\
 	--std=c++14 -Werror -Wextra -Wall -Wfatal-errors -pedantic\
  	-Wno-overloaded-virtual -Wno-deprecated-register
 PERF=\
-	-march=native -fno-exceptions -fno-stack-protector \
-	-O3 -DNDEBUG
+	-march=native -fno-exceptions -fno-stack-protector
+#PERF+=-O3 -DNDEBUG
+PERF=-Og -g
 INC=-I. -I./ext/cl
 LIB=-lncurses -lpthread
 CCACHE?=ccache
@@ -47,11 +48,11 @@ OBJ=\
 	src/target/core/de10/module_boxer.o\
 	src/target/core/de10/program_boxer.o\
 	src/target/core/de10/quartus_server.o\
-	src/target/core/ice40/ice40_compiler.o\
-	src/target/core/ice40/ice40_logic.o\
-	src/target/core/ice40/module_boxer.o\
-	src/target/core/ice40/program_boxer.o\
-	src/target/core/ice40/icestorm_server.o\
+	src/target/core/icebrk/icebrk_compiler.o\
+	src/target/core/icebrk/icebrk_logic.o\
+	src/target/core/icebrk/module_boxer.o\
+	src/target/core/icebrk/program_boxer.o\
+	src/target/core/icebrk/icestorm_server.o\
 	src/target/core/proxy/proxy_compiler.o\
 	src/target/core/sw/sw_compiler.o\
 	src/target/core/sw/sw_logic.o\
@@ -148,6 +149,15 @@ HDR=\
 	src/target/core/de10/module_boxer.h\
 	src/target/core/de10/program_boxer.h\
 	src/target/core/de10/quartus_server.h\
+	src/target/core/icebrk/icebrk_compiler.h\
+	src/target/core/icebrk/icebrk_gpio.h\
+	src/target/core/icebrk/icebrk_led.h\
+	src/target/core/icebrk/icebrk_logic.h\
+	src/target/core/icebrk/icebrk_pad.h\
+	src/target/core/icebrk/io.h\
+	src/target/core/icebrk/module_boxer.h\
+	src/target/core/icebrk/program_boxer.h\
+	src/target/core/icebrk/icestorm_server.h\
 	src/target/core/proxy/proxy_compiler.h\
 	src/target/core/proxy/proxy_core.h\
 	src/target/core/stub/stub_core.h\
@@ -297,6 +307,7 @@ BMARK_OBJ=\
 BIN=\
 	bin/cascade\
 	bin/quartus_server\
+	bin/icestorm_server\
 	bin/remote_runtime\
 	bin/sw_fpga
 

@@ -28,7 +28,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/target/core/ice40/ice40_compiler.h"
+#include "src/target/core/icebrk/icebrk_compiler.h"
 
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -51,7 +51,7 @@ constexpr auto PAD_PIO_BASE = 0x00004000u;
 constexpr auto GPIO_PIO_BASE = 0x00005000u;
 constexpr auto LOG_PIO_BASE = 0x00040000u;
 
-Ice40Compiler::Ice40Compiler() : CoreCompiler() { 
+IcebrkCompiler::IcebrkCompiler() : CoreCompiler() { 
   fd_ = open("/dev/mem", (O_RDWR | O_SYNC));
   if (fd_ == -1) {
     virtual_base_ = reinterpret_cast<volatile uint8_t*>(MAP_FAILED);
@@ -66,7 +66,7 @@ Ice40Compiler::Ice40Compiler() : CoreCompiler() {
   next_seq_ = 2;
 }
 
-Ice40Compiler::~Ice40Compiler() {
+IcebrkCompiler::~IcebrkCompiler() {
   // Close the descriptor, and unmap the memory associated with the fpga
   if (fd_ != -1) {
     close(fd_);
@@ -76,17 +76,17 @@ Ice40Compiler::~Ice40Compiler() {
   }
 }
 
-Ice40Compiler& Ice40Compiler::set_host(const string& host) {
+IcebrkCompiler& IcebrkCompiler::set_host(const string& host) {
   host_ = host;
   return *this;
 }
 
-Ice40Compiler& Ice40Compiler::set_port(uint32_t port) {
+IcebrkCompiler& IcebrkCompiler::set_port(uint32_t port) {
   port_ = port;
   return *this;
 }
 
-void Ice40Compiler::abort() {
+void IcebrkCompiler::abort() {
   Socket sock;
   sock.connect(host_, port_);
 
@@ -103,14 +103,14 @@ void Ice40Compiler::abort() {
   cv_.notify_all();
 }
 
-Ice40Gpio* Ice40Compiler::compile_gpio(Interface* interface, ModuleDeclaration* md) {
+IcebrkGpio* IcebrkCompiler::compile_gpio(Interface* interface, ModuleDeclaration* md) {
   if (virtual_base_ == MAP_FAILED) {
-    error("Ice40 gpio compilation failed due to inability to memory map device");
+    error("Icebrk gpio compilation failed due to inability to memory map device");
     delete md;
     return nullptr;
   }
   if (!check_io(md, 8, 8)) {
-    error("Unable to compile a ice40 gpio with more than 8 outputs");
+    error("Unable to compile a icebrk gpio with more than 8 outputs");
     delete md;
     return nullptr;
   }
@@ -120,21 +120,21 @@ Ice40Gpio* Ice40Compiler::compile_gpio(Interface* interface, ModuleDeclaration* 
     const auto* in = *ModuleInfo(md).inputs().begin();
     const auto id = to_vid(in);
     delete md;
-    return new Ice40Gpio(interface, id, led_addr);
+    return new IcebrkGpio(interface, id, led_addr);
   } else {
     delete md;
-    return new Ice40Gpio(interface, nullid(), led_addr);
+    return new IcebrkGpio(interface, nullid(), led_addr);
   }
 }
 
-Ice40Led* Ice40Compiler::compile_led(Interface* interface, ModuleDeclaration* md) {
+IcebrkLed* IcebrkCompiler::compile_led(Interface* interface, ModuleDeclaration* md) {
   if (virtual_base_ == MAP_FAILED) {
-    error("Ice40 led compilation failed due to inability to memory map device");
+    error("Icebrk led compilation failed due to inability to memory map device");
     delete md;
     return nullptr;
   }
   if (!check_io(md, 8, 8)) {
-    error("Unable to compile a ice40 led with more than 8 outputs");
+    error("Unable to compile a icebrk led with more than 8 outputs");
     delete md;
     return nullptr;
   }
@@ -144,21 +144,21 @@ Ice40Led* Ice40Compiler::compile_led(Interface* interface, ModuleDeclaration* md
     const auto* in = *ModuleInfo(md).inputs().begin();
     const auto id = to_vid(in);
     delete md;
-    return new Ice40Led(interface, id, led_addr);
+    return new IcebrkLed(interface, id, led_addr);
   } else {
     delete md;
-    return new Ice40Led(interface, nullid(), led_addr);
+    return new IcebrkLed(interface, nullid(), led_addr);
   }
 }
 
-Ice40Pad* Ice40Compiler::compile_pad(Interface* interface, ModuleDeclaration* md) {
+IcebrkPad* IcebrkCompiler::compile_pad(Interface* interface, ModuleDeclaration* md) {
   if (virtual_base_ == MAP_FAILED) {
-    error("Ice40 pad compilation failed due to inability to memory map device");
+    error("Icebrk pad compilation failed due to inability to memory map device");
     delete md;
     return nullptr;
   }
   if (!check_io(md, 0, 4)) {
-    error("Unable to compile a ice40 pad with more than 4 inputs");
+    error("Unable to compile a icebrk pad with more than 4 inputs");
     delete md;
     return nullptr;
   }
@@ -169,10 +169,10 @@ Ice40Pad* Ice40Compiler::compile_pad(Interface* interface, ModuleDeclaration* md
   const auto w = Evaluate().get_width(out);
   delete md;
 
-  return new Ice40Pad(interface, id, w, pad_addr);
+  return new IcebrkPad(interface, id, w, pad_addr);
 }
 
-Ice40Logic* Ice40Compiler::compile_logic(Interface* interface, ModuleDeclaration* md) {
+IcebrkLogic* IcebrkCompiler::compile_logic(Interface* interface, ModuleDeclaration* md) {
   ModuleInfo info(md);
 
   // Check range on mid 
@@ -185,7 +185,7 @@ Ice40Logic* Ice40Compiler::compile_logic(Interface* interface, ModuleDeclaration
   // Create a new core with address identity based on module id
   volatile uint8_t* addr = virtual_base_+((ALT_LWFPGALVS_OFST + LOG_PIO_BASE) & HW_REGS_MASK) + to_mid(md->get_id());
   const auto mid = to_mid(md->get_id());
-  auto* de = new Ice40Logic(interface, md, addr);
+  auto* de = new IcebrkLogic(interface, md, addr);
 
   // Register inputs, state, and outputs
   for (auto* i : info.inputs()) {

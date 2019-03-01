@@ -36,7 +36,7 @@
 #include "src/target/common/remote_runtime.h"
 #include "src/target/compiler.h"
 #include "src/target/core/de10/de10_compiler.h"
-#include "src/target/core/ice40/ice40_compiler.h"
+#include "src/target/core/icebrk/icebrk_compiler.h"
 #include "src/target/core/proxy/proxy_compiler.h"
 #include "src/target/core/sw/sw_compiler.h"
 
@@ -87,14 +87,14 @@ int main(int argc, char** argv) {
   auto* dc = new De10Compiler();
     dc->set_host(::quartus_host.value());
     dc->set_port(::quartus_port.value());
-  auto* ic = new Ice40Compiler();
+  auto* ic = new IcebrkCompiler();
     ic->set_host(::quartus_host.value());
     ic->set_port(::quartus_port.value());
   auto* pc = new ProxyCompiler();
   auto* sc = new SwCompiler();
   auto* c = new Compiler();
     c->set_de10_compiler(dc);
-    c->set_ice40_compiler(ic);
+    c->set_icebrk_compiler(ic);
     c->set_proxy_compiler(pc);
     c->set_sw_compiler(sc);
 

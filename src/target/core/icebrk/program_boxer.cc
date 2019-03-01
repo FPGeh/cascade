@@ -28,19 +28,19 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/target/core/ice40/program_boxer.h"
+#include "src/target/core/icebrk/program_boxer.h"
 
 #include <sstream>
 #include "src/base/stream/indstream.h"
 #include "src/verilog/ast/ast.h"
-#include "src/target/core/ice40/ice40_logic.h"
-#include "src/target/core/ice40/module_boxer.h"
+#include "src/target/core/icebrk/icebrk_logic.h"
+#include "src/target/core/icebrk/module_boxer.h"
 
 using namespace std;
 
 namespace cascade {
 
-bool ProgramBoxerIce40::push(MId mid, const ModuleDeclaration* md, const Ice40Logic* de) {
+bool ProgramBoxerIcebrk::push(MId mid, const ModuleDeclaration* md, const IcebrkLogic* de) {
   // Count the number of lines in this module. Code size increases monotonically, which
   // means it should function sufficiently as a sequence number.
   const auto seq = md->size_items();
@@ -55,12 +55,12 @@ bool ProgramBoxerIce40::push(MId mid, const ModuleDeclaration* md, const Ice40Lo
   }
 
   // This request is fresh. box the logic and insert it into the repository. 
-  const auto bmd = ModuleBoxerIce40().box(mid, md, de);
+  const auto bmd = ModuleBoxerIcebrk().box(mid, md, de);
   repo_.insert(make_pair(mid, make_pair(seq, bmd)));
   return true;
 }
 
-string ProgramBoxerIce40::get() const {
+string ProgramBoxerIcebrk::get() const {
   stringstream ss;
   indstream os(ss);
 

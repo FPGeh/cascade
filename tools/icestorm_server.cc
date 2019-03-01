@@ -28,58 +28,64 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef CASCADE_SRC_TARGET_CORE_ICE40_ICE40_COMPILER_H
-#define CASCADE_SRC_TARGET_CORE_ICE40_ICE40_COMPILER_H
-
-#include <condition_variable>
-#include <mutex>
-#include <stdint.h>
+#include <cstring>
+#include <iostream>
+#include <signal.h>
 #include <string>
-#include <unordered_map>
-#include "src/target/core_compiler.h"
-#include "src/target/core/ice40/ice40_gpio.h"
-#include "src/target/core/ice40/ice40_led.h"
-#include "src/target/core/ice40/ice40_logic.h"
-#include "src/target/core/ice40/ice40_pad.h"
-#include "src/target/core/ice40/program_boxer.h"
+#include "ext/cl/include/cl.h"
+#include "src/target/core/icebrk/icestorm_server.h"
 
-namespace cascade {
+using namespace cl;
+using namespace cascade;
+using namespace std;
 
-class IcestormClient;
+namespace {
 
-class Ice40Compiler : public CoreCompiler {
-  public:
-    Ice40Compiler();
-    ~Ice40Compiler() override;
+__attribute__((unused)) auto& g = Group::create("Icestorm Server Options");
+auto& path = StrArg<string>::create("--path")
+  .usage("<path/to/icestorm>")
+  .description("Path to icestorm installation directory")
+  .initial("/usr/local");
+auto& usb = StrArg<string>::create("--usb")
+  .usage("[x-y]")
+  .description("USB interface providing JTAG connectivity")
+  .initial("[3-11]");
+auto& port = StrArg<uint32_t>::create("--port")
+  .usage("<int>")
+  .description("Port to run icestorm server on")
+  .initial(9900);
 
-    Ice40Compiler& set_host(const std::string& host);
-    Ice40Compiler& set_port(uint32_t port);
+IcestormServer* qs = nullptr;
 
-    void abort() override;
+void handler(int sig) {
+  (void) sig;
+  qs->request_stop();
+}
 
-  private:
-    // Memory Mapped State:
-    int fd_;
-    volatile uint8_t* virtual_base_;
+} // namespace
 
-    // Icestorm Compiler Location:
-    std::string host_;
-    uint32_t port_;
+int main(int argc, char** argv) {
+  // Parse command line:
+  Simple::read(argc, argv);
 
-    // Compilation Request Ordering:
-    std::condition_variable cv_;
-    std::mutex lock_;
-    ProgramBoxerIce40 pbox_;
-    size_t curr_seq_;
-    size_t next_seq_;
-    std::unordered_map<MId, size_t> wait_table_;
+  struct sigaction action;
+  memset(&action, 0, sizeof(action));
+  action.sa_handler = ::handler;
+  sigaction(SIGINT, &action, nullptr);
 
-    Ice40Gpio* compile_gpio(Interface* interface, ModuleDeclaration* md) override;
-    Ice40Led* compile_led(Interface* interface, ModuleDeclaration* md) override;
-    Ice40Logic* compile_logic(Interface* interface, ModuleDeclaration* md) override;
-    Ice40Pad* compile_pad(Interface* interface, ModuleDeclaration* md) override;
-};
+  ::qs = new IcestormServer();
+  ::qs->path(::path.value());
+  ::qs->usb(::usb.value());
+  ::qs->port(::port.value());
 
-} // namespace cascade
+  if (!::qs->check()) {
+    cout << "Unable to locate core icestorm components!" << endl;
+  } else {
+    ::qs->run();
+    ::qs->wait_for_stop();
+  }
+  delete ::qs;
 
-#endif
+  cout << "Goodbye!" << endl;
+  return 0;
+}

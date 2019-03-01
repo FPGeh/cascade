@@ -2,7 +2,7 @@
 
 include data/stdlib/stdlib.v;
 
-(*__target="sw:ice40", __loc="runtime"*)
+(*__target="sw:icebrk", __loc="runtime"*)
 Root root();
 
 (*__target="sw", __loc="runtime"*)                    

@@ -34,7 +34,7 @@
 #include <string>
 #include "src/base/stream/indstream.h"
 #include "src/runtime/ids.h"
-#include "src/target/core/ice40/ice40_logic.h"
+#include "src/target/core/icebrk/icebrk_logic.h"
 #include "src/verilog/analyze/module_info.h"
 #include "src/verilog/ast/ast.h"
 #include "src/verilog/ast/visitors/builder.h"
@@ -42,15 +42,15 @@
 
 namespace cascade {
 
-class ModuleBoxerIce40 : public Builder {
+class ModuleBoxerIcebrk : public Builder {
   public:
-    ~ModuleBoxerIce40() override = default;
-    std::string box(MId id, const ModuleDeclaration* md, const Ice40Logic* de);
+    ~ModuleBoxerIcebrk() override = default;
+    std::string box(MId id, const ModuleDeclaration* md, const IcebrkLogic* de);
 
   private:
     // Source Management:
     const ModuleDeclaration* md_;
-    const Ice40Logic* de_;
+    const IcebrkLogic* de_;
 
     // System task management:
     size_t task_id_;
@@ -71,7 +71,7 @@ class ModuleBoxerIce40 : public Builder {
     // Sys Task Mangling Helper:
     class Mangler : public Visitor {
       public:
-        explicit Mangler(const Ice40Logic* de);
+        explicit Mangler(const IcebrkLogic* de);
         ~Mangler() override = default;
 
         template<typename InputItr>
@@ -80,7 +80,7 @@ class ModuleBoxerIce40 : public Builder {
       private:
         void init(size_t id);
         void visit(const Identifier* id) override;
-        const Ice40Logic* de_;
+        const IcebrkLogic* de_;
         SeqBlock* t_;
     };
 
@@ -90,8 +90,8 @@ class ModuleBoxerIce40 : public Builder {
     void emit_sys_task_state(indstream& os);
     void emit_control_state(indstream& os);
     void emit_view_variables(indstream& os);
-    void emit_view_decl(indstream& os, const Ice40Logic::VarInfo& vinfo);
-    void emit_view_init(indstream& os, const Ice40Logic::VarInfo& vinfo);
+    void emit_view_decl(indstream& os, const IcebrkLogic::VarInfo& vinfo);
+    void emit_view_init(indstream& os, const IcebrkLogic::VarInfo& vinfo);
     void emit_subscript(indstream& os, size_t idx, size_t n, const std::vector<size_t>& arity);
     void emit_program_logic(indstream& os);
     void emit_update_logic(indstream& os);
@@ -103,7 +103,7 @@ class ModuleBoxerIce40 : public Builder {
 };
 
 template <typename InputItr>
-inline Statement* ModuleBoxerIce40::Mangler::mangle(size_t id, InputItr begin, InputItr end) {
+inline Statement* ModuleBoxerIcebrk::Mangler::mangle(size_t id, InputItr begin, InputItr end) {
   init(id);
   for (; begin != end; ++begin) {
     (*begin)->accept(this);

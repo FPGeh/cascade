@@ -38,11 +38,11 @@
 
 namespace cascade {
 
-class Ice40Logic;
+class IcebrkLogic;
 
-class ProgramBoxerIce40 {
+class ProgramBoxerIcebrk {
   public:
-    bool push(MId id, const ModuleDeclaration* md, const Ice40Logic* de);
+    bool push(MId id, const ModuleDeclaration* md, const IcebrkLogic* de);
     std::string get() const;
 
   private:
